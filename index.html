@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LirdiChat AI — Онлайн Веб-Чат</title>
+    <title>LirdiChat AI — Онлайн Веб-Чат и Подписки</title>
     <style>
         * {
             box-sizing: border-box;
@@ -17,22 +17,135 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             padding: 20px;
         }
+
+        /* Шапка с Профилем */
         header {
-            text-align: center;
-            margin-bottom: 15px;
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0 20px 0;
+            border-bottom: 1px solid #2a2a2a;
+            margin-bottom: 20px;
         }
-        h1 {
-            font-size: 2rem;
-            color: #ffffff;
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #fff;
         }
-        h1 span {
+        .logo span {
             color: #00e676;
         }
         
-        /* Панель API Ключа */
+        .user-profile-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .plan-badge {
+            background: #2a2a2a;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: #888;
+            border: 1px solid #444;
+        }
+        .plan-badge.plus {
+            color: #00e676;
+            border-color: #00e676;
+            background: rgba(0, 230, 118, 0.1);
+        }
+        .plan-badge.pro {
+            color: #ffb300;
+            border-color: #ffb300;
+            background: rgba(255, 179, 0, 0.1);
+        }
+
+        .btn {
+            background: #00e676;
+            color: #000;
+            border: none;
+            padding: 10px 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn:hover {
+            background: #00c853;
+        }
+        .btn-outline {
+            background: transparent;
+            color: #fff;
+            border: 1px solid #555;
+        }
+        .btn-outline:hover {
+            background: #2a2a2a;
+        }
+
+        /* Панель Тарифов / Подписок */
+        .pricing-section {
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 25px;
+        }
+        .pricing-title {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            color: #aaa;
+        }
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .price-card {
+            background: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+        }
+        .price-card.popular {
+            border-color: #00e676;
+            box-shadow: 0 0 15px rgba(0,230,118,0.15);
+        }
+        .price-card.pro-card {
+            border-color: #ffb300;
+            box-shadow: 0 0 15px rgba(255,179,0,0.15);
+        }
+        .price-card h3 {
+            font-size: 1.4rem;
+            margin-bottom: 8px;
+        }
+        .price-card .price {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #fff;
+        }
+        .price-card ul {
+            list-style: none;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+            color: #bbb;
+        }
+        .price-card ul li {
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Настройка API Key Панели */
         .api-panel {
             background: #1e1e1e;
             padding: 10px 15px;
@@ -42,7 +155,7 @@
             align-items: center;
             margin-bottom: 15px;
             width: 100%;
-            max-width: 800px;
+            max-width: 1000px;
             border: 1px solid #333;
         }
         .api-panel input {
@@ -59,8 +172,8 @@
         .chat-container {
             background: #1e1e1e;
             width: 100%;
-            max-width: 800px;
-            flex: 1;
+            max-width: 1000px;
+            height: 500px;
             border-radius: 12px;
             display: flex;
             flex-direction: column;
@@ -100,11 +213,10 @@
             background: #332a00;
             color: #ffd700;
             align-self: center;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             border: 1px solid #665200;
         }
 
-        /* Форма ввода */
         .chat-input-area {
             display: flex;
             padding: 15px;
@@ -122,65 +234,186 @@
             outline: none;
             font-size: 1rem;
         }
-        .btn {
+
+        /* Модальное окно Входа / Регистрации */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal {
+            background: #1e1e1e;
+            padding: 30px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid #444;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+        .form-group input {
+            width: 100%;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 10px;
+            border-radius: 6px;
+            outline: none;
+        }
+        .modal-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 8px;
+            background: #2a2a2a;
+            border: none;
+            color: #888;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .tab-btn.active {
             background: #00e676;
             color: #000;
-            border: none;
-            padding: 12px 20px;
             font-weight: bold;
-            border-radius: 8px;
+        }
+        .close-modal {
+            background: transparent;
+            border: none;
+            color: #888;
+            float: right;
+            font-size: 1.2rem;
             cursor: pointer;
-            transition: 0.2s;
-        }
-        .btn:hover {
-            background: #00c853;
-        }
-        .btn-file {
-            background: #333;
-            color: #fff;
-            border: 1px solid #555;
-        }
-        .btn-file:hover {
-            background: #444;
-        }
-        #fileInput {
-            display: none;
         }
     </style>
 </head>
 <body>
 
+    <!-- Шапка -->
     <header>
-        <h1>LirdiChat <span>AI</span> Online</h1>
+        <div class="logo">LirdiChat <span>AI</span></div>
+        
+        <div class="user-profile-section" id="userSection">
+            <button class="btn" onclick="openAuthModal('login')">Войти / Регистрация</button>
+        </div>
     </header>
 
     <!-- Панель настройки API Ключа -->
     <div class="api-panel">
-        <label for="apiKey">Groq API Key:</label>
+        <label for="apiKey" style="font-size: 0.9rem; color: #aaa;">Groq API Key:</label>
         <input type="password" id="apiKey" placeholder="Вставьте ваш gsk_... ключ">
-        <button class="btn" onclick="saveKey()">Сохранить</button>
+        <button class="btn" style="padding: 8px 15px;" onclick="saveKey()">Сохранить</button>
     </div>
 
-    <!-- Чат окно -->
+    <!-- Подписки Lirdi Plus / Pro -->
+    <section class="pricing-section">
+        <div class="pricing-title">Выберите ваш уровень доступа</div>
+        <div class="pricing-grid">
+            
+            <div class="price-card">
+                <div>
+                    <h3>Lirdi Free</h3>
+                    <div class="price">0 ₽<span>/мес</span></div>
+                    <ul>
+                        <li>✅ Базовый доступ к LirdiChat</li>
+                        <li>✅ Ограниченные лимиты запросов</li>
+                        <li>❌ Приоритетная скорость</li>
+                    </ul>
+                </div>
+                <button class="btn btn-outline" onclick="subscribePlan('Free')">Текущий тариф</button>
+            </div>
+
+            <div class="price-card popular">
+                <div>
+                    <h3>Lirdi Plus ⚡</h3>
+                    <div class="price">299 ₽<span>/мес</span></div>
+                    <ul>
+                        <li>✅ Анализ .JAR файлов без ограничений</li>
+                        <li>✅ Увеличенный контекст памяти</li>
+                        <li>✅ Выделенные мощности Groq API</li>
+                    </ul>
+                </div>
+                <button class="btn" onclick="subscribePlan('Lirdi Plus')">Оформить Plus</button>
+            </div>
+
+            <div class="price-card pro-card">
+                <div>
+                    <h3>Lirdi Pro 🔥</h3>
+                    <div class="price">599 ₽<span>/мес</span></div>
+                    <ul>
+                        <li>✅ Все преимущества Lirdi Plus</li>
+                        <li>✅ Генерация и сборка .JAR на сервере</li>
+                        <li>✅ Приоритетная поддержка 24/7</li>
+                    </ul>
+                </div>
+                <button class="btn" style="background: #ffb300;" onclick="subscribePlan('Lirdi Pro')">Оформить Pro</button>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Окно чата -->
     <div class="chat-container">
         <div class="chat-messages" id="chatMessages">
-            <div class="message ai-message">Привет! Я LirdiChat AI. Задавай мне любые вопросы, проси написать код или анализируй .JAR файлы прямо в браузере!</div>
+            <div class="message ai-message">Привет! Я LirdiChat AI. Укажите свой Groq API-ключ в панели выше и общайтесь прямо в браузере!</div>
         </div>
 
         <div class="chat-input-area">
-            <input type="file" id="fileInput" accept=".jar" onchange="handleFileSelect(event)">
-            <button class="btn btn-file" id="fileBtn" onclick="document.getElementById('fileInput').click()">📎 .JAR</button>
+            <input type="file" id="fileInput" accept=".jar" style="display:none;" onchange="handleFileSelect(event)">
+            <button class="btn btn-outline" id="fileBtn" onclick="document.getElementById('fileInput').click()">📎 .JAR</button>
             <input type="text" id="userInput" placeholder="Напишите сообщение..." onkeydown="if(event.key === 'Enter') sendMessage()">
             <button class="btn" onclick="sendMessage()">Отправить</button>
         </div>
     </div>
 
+    <!-- Модальное окно Входа / Регистрации -->
+    <div class="modal-overlay" id="authModal">
+        <div class="modal">
+            <button class="close-modal" onclick="closeAuthModal()">✕</button>
+            <div class="modal-tabs">
+                <button class="tab-btn active" id="tabLogin" onclick="switchTab('login')">Вход</button>
+                <button class="tab-btn" id="tabRegister" onclick="switchTab('register')">Регистрация</button>
+            </div>
+
+            <form id="authForm" onsubmit="handleAuth(event)">
+                <div class="form-group" id="loginGroup">
+                    <label>Логин пользователя</label>
+                    <input type="text" id="authLogin" placeholder="Введите логин" required>
+                </div>
+                <div class="form-group" id="emailGroup" style="display: none;">
+                    <label>Электронная почта</label>
+                    <input type="email" id="authEmail" placeholder="example@mail.com">
+                </div>
+                <div class="form-group">
+                    <label>Пароль</label>
+                    <input type="password" id="authPassword" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn" style="width: 100%; margin-top: 10px;" id="authSubmitBtn">Войти</button>
+            </form>
+        </div>
+    </div>
+
     <script>
-        let selectedJarContent = "";
+        let currentMode = 'login';
+        let currentUser = JSON.parse(localStorage.getItem('lirdi_user')) || null;
         let selectedJarName = "";
 
-        // Восстановление ключа из памяти браузера
         window.onload = function() {
+            updateUserUI();
             const savedKey = localStorage.getItem("groq_api_key");
             if (savedKey) {
                 document.getElementById("apiKey").value = savedKey;
@@ -190,20 +423,97 @@
         function saveKey() {
             const key = document.getElementById("apiKey").value.trim();
             localStorage.setItem("groq_api_key", key);
-            alert("API-ключ сохранен в памяти браузера!");
+            alert("API-ключ сохранен в вашем браузере!");
+        }
+
+        function openAuthModal(mode) {
+            document.getElementById('authModal').style.display = 'flex';
+            switchTab(mode);
+        }
+
+        function closeAuthModal() {
+            document.getElementById('authModal').style.display = 'none';
+        }
+
+        function switchTab(mode) {
+            currentMode = mode;
+            const tabLogin = document.getElementById('tabLogin');
+            const tabRegister = document.getElementById('tabRegister');
+            const emailGroup = document.getElementById('emailGroup');
+            const submitBtn = document.getElementById('authSubmitBtn');
+
+            if (mode === 'login') {
+                tabLogin.classList.add('active');
+                tabRegister.classList.remove('active');
+                emailGroup.style.display = 'none';
+                submitBtn.innerText = 'Войти';
+            } else {
+                tabRegister.classList.add('active');
+                tabLogin.classList.remove('active');
+                emailGroup.style.display = 'block';
+                submitBtn.innerText = 'Зарегистрироваться';
+            }
+        }
+
+        function handleAuth(event) {
+            event.preventDefault();
+            const login = document.getElementById('authLogin').value.trim();
+            const email = document.getElementById('authEmail').value.trim();
+
+            currentUser = {
+                login: login,
+                email: email || login + '@lirdi.ai',
+                plan: 'Free'
+            };
+
+            localStorage.setItem('lirdi_user', JSON.stringify(currentUser));
+            updateUserUI();
+            closeAuthModal();
+            appendMessage('system', `Добро пожаловать, ${login}! Вы успешно вошли.`);
+        }
+
+        function logout() {
+            localStorage.removeItem('lirdi_user');
+            currentUser = null;
+            updateUserUI();
+            appendMessage('system', 'Вы вышли из аккаунта.');
+        }
+
+        function updateUserUI() {
+            const userSection = document.getElementById('userSection');
+            if (currentUser) {
+                let badgeClass = currentUser.plan === 'Lirdi Plus' ? 'plus' : (currentUser.plan === 'Lirdi Pro' ? 'pro' : '');
+                userSection.innerHTML = `
+                    <span class="plan-badge ${badgeClass}">${currentUser.plan}</span>
+                    <span style="font-weight: bold;">👤 ${currentUser.login}</span>
+                    <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem;" onclick="logout()">Выйти</button>
+                `;
+            } else {
+                userSection.innerHTML = `
+                    <button class="btn" onclick="openAuthModal('login')">Войти / Регистрация</button>
+                `;
+            }
+        }
+
+        function subscribePlan(planName) {
+            if (!currentUser) {
+                alert('Пожалуйста, войдите в аккаунт или зарегистрируйтесь, чтобы оформить подписку!');
+                openAuthModal('login');
+                return;
+            }
+            currentUser.plan = planName;
+            localStorage.setItem('lirdi_user', JSON.stringify(currentUser));
+            updateUserUI();
+            alert(`Поздравляем! Вы успешно оформили подписку ${planName}.`);
+            appendMessage('system', `Тариф обновлен до: ${planName}`);
         }
 
         function handleFileSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
-
             selectedJarName = file.name;
-            document.getElementById("fileBtn").innerText = "✅ " + file.name;
-
-            // Считывание структуры .jar через JS (в формате текста)
-            selectedJarContent = `Прикреплен файл: ${file.name} (Размер: ${file.size} байт)\n`;
-            
-            appendMessage("system", `Файл ${file.name} прикреплен к следующему сообщению.`);
+            document.getElementById('fileBtn').innerText = "✅ " + file.name;
+            appendMessage('system', `Файл ${file.name} прикреплен к следующему запросу.`);
         }
 
         async function sendMessage() {
@@ -211,18 +521,18 @@
             const userText = inputField.value.trim();
             const apiKey = document.getElementById("apiKey").value.trim();
 
-            if (!userText && !selectedJarContent) return;
+            if (!userText) return;
+
             if (!apiKey) {
-                alert("Пожалуйста, укажите Groq API Key в верхней панели!");
+                alert("Пожалуйста, введите ваш Groq API Key в верхней панели!");
                 return;
             }
 
             let fullPrompt = userText;
-            if (selectedJarContent) {
-                fullPrompt = `${selectedJarContent}\nВопрос пользователя: ${userText}`;
-                selectedJarContent = "";
+            if (selectedJarName) {
+                fullPrompt = `[Пользователь прикрепил .jar файл ${selectedJarName}]\nВопрос: ${userText}`;
                 selectedJarName = "";
-                document.getElementById("fileBtn").innerText = "📎 .JAR";
+                document.getElementById('fileBtn').innerText = "📎 .JAR";
             }
 
             appendMessage("user", userText);
@@ -242,7 +552,7 @@
                         messages: [
                             {
                                 role: "system",
-                                content: "Тебя зовут LirdiChat AI. Ты умный ассистент, который отлично пишет код, отвечает на любые вопросы и помогает программистам."
+                                content: "Тебя зовут LirdiChat AI. Ты отвечаешь ИСКЛЮЧИТЕЛЬНО на русском языке. Категорически запрещено использовать иероглифы, китайские слова или смеси языков в ответах. Будь вежливым и грамотным ассистентом."
                             },
                             {
                                 role: "user",
@@ -261,7 +571,7 @@
                     loadingMsg.innerText = "Ошибка API: " + (data.error?.message || response.statusText);
                 }
             } catch (error) {
-                loadingMsg.innerText = "Ошибка сети/подключения: " + error.message;
+                loadingMsg.innerText = "Ошибка подключения: " + error.message;
             }
         }
 
