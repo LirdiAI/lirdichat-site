@@ -185,7 +185,7 @@
             gap: 8px;
         }
 
-        /* Главная макетная обертка ЧАТА с боковой панелью */
+        /* ЧАТ */
         .main-chat-wrapper {
             display: flex;
             width: 100%;
@@ -194,7 +194,6 @@
             gap: 15px;
         }
 
-        /* Боковая панель истории */
         .chat-sidebar {
             width: 260px;
             background: #1e1e1e;
@@ -269,7 +268,6 @@
             color: #ff5252;
         }
 
-        /* Контейнер чата */
         .chat-container {
             flex: 1;
             background: #1e1e1e;
@@ -408,7 +406,14 @@
             font-weight: bold;
         }
 
-        /* QR Код окно */
+        .auth-error {
+            color: #ff5252;
+            font-size: 0.85rem;
+            margin-bottom: 12px;
+            display: none;
+            text-align: center;
+        }
+
         .qr-container {
             text-align: center;
         }
@@ -435,7 +440,6 @@
     <!-- Шапка -->
     <header>
         <div class="logo">LirdiChat <span>AI</span></div>
-        
         <div class="user-profile-section" id="userSection">
             <button class="btn" onclick="openAuthModal('login')">Войти / Регистрация</button>
         </div>
@@ -493,7 +497,7 @@
         </div>
     </section>
 
-    <!-- Основной блок чата -->
+    <!-- Чат -->
     <div class="main-chat-wrapper">
         <div class="chat-sidebar">
             <button class="new-chat-btn" onclick="createNewChat()">✏️ Новый чат</button>
@@ -514,7 +518,7 @@
         </div>
     </div>
 
-    <!-- Модальное окно Входа / Регистрации -->
+    <!-- Модальное окно Авторизации -->
     <div class="modal-overlay" id="authModal">
         <div class="modal">
             <button class="close-modal" onclick="closeAuthModal()">✕</button>
@@ -523,14 +527,16 @@
                 <button class="tab-btn" id="tabRegister" onclick="switchTab('register')">Регистрация</button>
             </div>
 
+            <div class="auth-error" id="authError"></div>
+
             <form id="authForm" onsubmit="handleAuth(event)">
-                <div class="form-group">
-                    <label>Логин пользователя</label>
-                    <input type="text" id="authLogin" placeholder="Введите логин" required>
+                <div class="form-group" id="usernameGroup" style="display: none;">
+                    <label>Ваш Никнейм</label>
+                    <input type="text" id="authUsername" placeholder="Имя / Никнейм">
                 </div>
-                <div class="form-group" id="emailGroup" style="display: none;">
-                    <label>Электронная почта</label>
-                    <input type="email" id="authEmail" placeholder="example@mail.com">
+                <div class="form-group">
+                    <label>Электронная почта (Email)</label>
+                    <input type="email" id="authEmail" placeholder="example@mail.com" required>
                 </div>
                 <div class="form-group">
                     <label>Пароль</label>
@@ -548,25 +554,171 @@
             <div class="qr-container">
                 <h2 id="payPlanName">Оплата подписки</h2>
                 <p style="color: #aaa; margin-top: 5px;">Отсканируйте QR-код в приложении банка</p>
-                
-                <img src="qr.png" alt="QR Code" class="qr-img" id="qrCodeImg" onerror="this.src='qr.png'">
-                
+                <img src="qr.png" alt="QR Code" class="qr-img" onerror="this.src='qr.png'">
                 <div class="pay-amount" id="payAmountText">150 ₽</div>
                 <p style="font-size: 0.85rem; color: #888; margin-bottom: 15px;">Период: <span id="payPeriodText">1 Месяц</span></p>
-                
                 <button class="btn" style="width: 100%;" onclick="confirmPayment()">Я оплатил</button>
             </div>
         </div>
     </div>
 
+    <!-- Подключение Firebase (Модули v10) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getAuth, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword, 
+            onAuthStateChanged, 
+            signOut 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            setDoc, 
+            getDoc,
+            updateDoc
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // ==========================================
+        // ⚠️ ВСТАВЬТЕ СЮДА ВАШИ КЛЮЧИ ИЗ FIREBASE
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "ВАШ_API_KEY",
+            authDomain: "ВАШ_PROJECT_ID.firebaseapp.com",
+            projectId: "ВАШ_PROJECT_ID",
+            storageBucket: "ВАШ_PROJECT_ID.appspot.com",
+            messagingSenderId: "ВАШ_SENDER_ID",
+            appId: "ВАШ_APP_ID"
+        };
+
+        // Инициализация Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        window.firebaseAuth = auth;
+        window.firebaseDb = db;
+
+        // Отслеживание входа в систему в реальном времени
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // Пользователь авторизован
+                try {
+                    const userDoc = await getDoc(doc(db, "users", user.uid));
+                    if (userDoc.exists()) {
+                        window.currentUserData = { uid: user.uid, ...userDoc.data() };
+                    } else {
+                        window.currentUserData = { uid: user.uid, username: user.email.split('@')[0], plan: 'Lirdi Free' };
+                    }
+                } catch (e) {
+                    console.error("Ошибка загрузки профиля:", e);
+                }
+            } else {
+                window.currentUserData = null;
+            }
+            updateUserUI();
+        });
+
+        // Функция Входа / Регистрации
+        window.handleAuth = async function(event) {
+            event.preventDefault();
+            const email = document.getElementById('authEmail').value.trim();
+            const password = document.getElementById('authPassword').value;
+            const username = document.getElementById('authUsername').value.trim();
+            const errorDiv = document.getElementById('authError');
+
+            errorDiv.style.display = 'none';
+
+            if (window.currentAuthMode === 'register') {
+                try {
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    const user = userCredential.user;
+
+                    const newUserData = {
+                        username: username || email.split('@')[0],
+                        email: email,
+                        plan: 'Lirdi Free',
+                        expiryTimestamp: null,
+                        createdAt: new Date().toISOString()
+                    };
+
+                    // Сохраняем пользователя в базу данных Firestore
+                    await setDoc(doc(db, "users", user.uid), newUserData);
+                    closeAuthModal();
+                } catch (error) {
+                    errorDiv.innerText = "Ошибка регистрации: " + getReadableAuthError(error.code);
+                    errorDiv.style.display = 'block';
+                }
+            } else {
+                try {
+                    await signInWithEmailAndPassword(auth, email, password);
+                    closeAuthModal();
+                } catch (error) {
+                    errorDiv.innerText = "Ошибка входа: " + getReadableAuthError(error.code);
+                    errorDiv.style.display = 'block';
+                }
+            }
+        };
+
+        // Выход из системы
+        window.logout = async function() {
+            await signOut(auth);
+            window.currentUserData = null;
+            updateUserUI();
+        };
+
+        // Обновление подписки в базе данных
+        window.confirmPayment = async function() {
+            if (!window.currentUserData) return;
+
+            let now = new Date();
+            if (window.currentBillingCycle === 'month') {
+                now.setMonth(now.getMonth() + 1);
+            } else {
+                now.setFullYear(now.getFullYear() + 1);
+            }
+
+            const newPlan = window.pendingPayPlan;
+            const expiry = now.getTime();
+
+            try {
+                await updateDoc(doc(db, "users", window.currentUserData.uid), {
+                    plan: newPlan,
+                    expiryTimestamp: expiry
+                });
+
+                window.currentUserData.plan = newPlan;
+                window.currentUserData.expiryTimestamp = expiry;
+                updateUserUI();
+                closePayModal();
+                alert(`Подписка ${newPlan} успешно активирована!`);
+            } catch (e) {
+                alert("Ошибка обновления подписки: " + e.message);
+            }
+        };
+
+        function getReadableAuthError(code) {
+            switch (code) {
+                case 'auth/invalid-email': return 'Неверный формат Email';
+                case 'auth/user-not-found': return 'Пользователь не найден';
+                case 'auth/wrong-password': return 'Неверный пароль';
+                case 'auth/email-already-in-use': return 'Пользователь с таким Email уже зарегистрирован';
+                case 'auth/weak-password': return 'Пароль должен содержать минимум 6 символов';
+                default: return 'Проверьте введенные данные';
+            }
+        }
+    </script>
+
+    <!-- Основной клиентский код интерфейса -->
     <script>
         const DEFAULT_GROQ_KEY = "ВСТАВЬТЕ_ВАШ_GROQ_KEY_СЮДА";
 
-        let currentBillingCycle = 'month';
-        let pendingPayPlan = null;
-        let pendingPayAmount = 0;
+        window.currentBillingCycle = 'month';
+        window.currentAuthMode = 'login';
+        window.pendingPayPlan = null;
+        window.pendingPayAmount = 0;
 
-        let currentUser = JSON.parse(localStorage.getItem('lirdi_user')) || null;
         let selectedJarName = "";
         let lastAiCodeSnippet = "";
 
@@ -574,8 +726,6 @@
         let currentChatId = localStorage.getItem('lirdi_active_chat_id') || null;
 
         window.onload = function() {
-            updateUserUI();
-
             if (chats.length === 0) {
                 createNewChat();
             } else {
@@ -732,7 +882,7 @@
                 "id": "lirdichat_mod",
                 "version": "1.0.0",
                 "name": "LirdiChat Generated Mod",
-                "authors": [currentUser ? currentUser.login : "LirdiUser"],
+                "authors": [window.currentUserData ? window.currentUserData.username : "LirdiUser"],
                 "entrypoints": { "main": ["net.lirdi.mod.LirdiMod"] }
             };
             zip.file("fabric.mod.json", JSON.stringify(fabricModJson, null, 2));
@@ -752,7 +902,7 @@
         }
 
         function setBillingCycle(cycle) {
-            currentBillingCycle = cycle;
+            window.currentBillingCycle = cycle;
             document.getElementById('btnMonth').classList.toggle('active', cycle === 'month');
             document.getElementById('btnYear').classList.toggle('active', cycle === 'year');
             document.getElementById('plusPrice').innerHTML = cycle === 'month' ? '150 ₽<span style="font-size: 1rem; color: #888;">/мес</span>' : '500 ₽<span style="font-size: 1rem; color: #888;">/год</span>';
@@ -761,46 +911,30 @@
 
         function openAuthModal(mode) {
             document.getElementById('authModal').style.display = 'flex';
+            document.getElementById('authError').style.display = 'none';
             switchTab(mode);
         }
         function closeAuthModal() {
             document.getElementById('authModal').style.display = 'none';
         }
         function switchTab(mode) {
+            window.currentAuthMode = mode;
             document.getElementById('tabLogin').classList.toggle('active', mode === 'login');
             document.getElementById('tabRegister').classList.toggle('active', mode === 'register');
-            document.getElementById('emailGroup').style.display = mode === 'login' ? 'none' : 'block';
+            document.getElementById('usernameGroup').style.display = mode === 'login' ? 'none' : 'block';
             document.getElementById('authSubmitBtn').innerText = mode === 'login' ? 'Войти' : 'Зарегистрироваться';
-        }
-
-        function handleAuth(event) {
-            event.preventDefault();
-            const login = document.getElementById('authLogin').value.trim();
-            const email = document.getElementById('authEmail').value.trim();
-
-            currentUser = {
-                login: login,
-                email: email || login + '@lirdi.ai',
-                plan: 'Lirdi Free',
-                expiryTimestamp: null,
-                createdAt: Date.now()
-            };
-
-            localStorage.setItem('lirdi_user', JSON.stringify(currentUser));
-            updateUserUI();
-            closeAuthModal();
+            document.getElementById('authError').style.display = 'none';
         }
 
         function updateUserUI() {
             const userSection = document.getElementById('userSection');
-            if (currentUser) {
+            if (window.currentUserData) {
                 let colorClass = '';
-                if (currentUser.plan === 'Lirdi Plus') colorClass = 'plus';
-                if (currentUser.plan === 'Lirdi Pro') colorClass = 'pro';
+                if (window.currentUserData.plan === 'Lirdi Plus') colorClass = 'plus';
+                if (window.currentUserData.plan === 'Lirdi Pro') colorClass = 'pro';
 
-                // Переход на отдельную страницу profile.html при клике
                 userSection.innerHTML = `
-                    <a href="profile.html" class="user-nickname ${colorClass}">${currentUser.login}</a>
+                    <a href="#" class="user-nickname ${colorClass}">${window.currentUserData.username}</a>
                     <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem;" onclick="logout()">Выйти</button>
                 `;
             } else {
@@ -810,50 +944,26 @@
             }
         }
 
-        function logout() {
-            localStorage.removeItem('lirdi_user');
-            currentUser = null;
-            updateUserUI();
-        }
-
         function openPayment(planName) {
-            if (!currentUser) {
+            if (!window.currentUserData) {
                 alert('Сначала войдите в аккаунт!');
                 openAuthModal('login');
                 return;
             }
 
-            pendingPayPlan = planName;
-            pendingPayAmount = (planName === 'Lirdi Plus') 
-                ? (currentBillingCycle === 'month' ? 150 : 500) 
-                : (currentBillingCycle === 'month' ? 400 : 750);
+            window.pendingPayPlan = planName;
+            window.pendingPayAmount = (planName === 'Lirdi Plus') 
+                ? (window.currentBillingCycle === 'month' ? 150 : 500) 
+                : (window.currentBillingCycle === 'month' ? 400 : 750);
 
             document.getElementById('payPlanName').innerText = 'Оплата ' + planName;
-            document.getElementById('payAmountText').innerText = pendingPayAmount + ' ₽';
-            document.getElementById('payPeriodText').innerText = currentBillingCycle === 'month' ? '1 Месяц' : '1 Год';
+            document.getElementById('payAmountText').innerText = window.pendingPayAmount + ' ₽';
+            document.getElementById('payPeriodText').innerText = window.currentBillingCycle === 'month' ? '1 Месяц' : '1 Год';
             document.getElementById('payModal').style.display = 'flex';
         }
 
         function closePayModal() {
             document.getElementById('payModal').style.display = 'none';
-        }
-
-        function confirmPayment() {
-            let now = new Date();
-            if (currentBillingCycle === 'month') {
-                now.setMonth(now.getMonth() + 1);
-            } else {
-                now.setFullYear(now.getFullYear() + 1);
-            }
-
-            currentUser.plan = pendingPayPlan;
-            currentUser.expiryTimestamp = now.getTime(); // Запоминаем точное время окончания
-
-            localStorage.setItem('lirdi_user', JSON.stringify(currentUser));
-            updateUserUI();
-            closePayModal();
-
-            alert(`Подписка ${pendingPayPlan} успешно активирована!`);
         }
 
         function handleFileSelect(event) {
