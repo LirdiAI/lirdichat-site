@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LirdiChat AI — Онлайн Веб-Чат и Подписки</title>
-    <!-- Подключаем JSZip для скачивания/генерации .jar прямо в браузере -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         * {
@@ -58,6 +57,7 @@
             border-radius: 6px;
             transition: 0.2s;
             color: #ffffff;
+            text-decoration: none;
         }
         .user-nickname:hover {
             background: #2a2a2a;
@@ -493,18 +493,14 @@
         </div>
     </section>
 
-    <!-- Основной блок чата с историей -->
+    <!-- Основной блок чата -->
     <div class="main-chat-wrapper">
-        <!-- Боковая панель (История и Кнопка Создания) -->
         <div class="chat-sidebar">
             <button class="new-chat-btn" onclick="createNewChat()">✏️ Новый чат</button>
             <div style="font-size: 0.8rem; color: #888; margin-top: 5px;">История чатов:</div>
-            <div class="chat-history-list" id="chatHistoryList">
-                <!-- Элементы истории будут генерироваться динамически -->
-            </div>
+            <div class="chat-history-list" id="chatHistoryList"></div>
         </div>
 
-        <!-- Контейнер сообщений -->
         <div class="chat-container">
             <div class="chat-messages" id="chatMessages"></div>
 
@@ -545,21 +541,6 @@
         </div>
     </div>
 
-    <!-- Модальное окно Профиля -->
-    <div class="modal-overlay" id="profileModal">
-        <div class="modal">
-            <button class="close-modal" onclick="closeProfileModal()">✕</button>
-            <h2 style="margin-bottom: 15px; text-align: center;">Профиль</h2>
-            <div style="background: #2a2a2a; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                <p style="margin-bottom: 8px;"><strong>Логин:</strong> <span id="profLogin"></span></p>
-                <p style="margin-bottom: 8px;"><strong>Email:</strong> <span id="profEmail"></span></p>
-                <p style="margin-bottom: 8px;"><strong>Текущая подписка:</strong> <span id="profPlan" style="font-weight: bold;"></span></p>
-                <p><strong>Действует до:</strong> <span id="profExpiry" style="color: #00e676;"></span></p>
-            </div>
-            <button class="btn btn-outline" style="width: 100%;" onclick="logout()">Выйти из аккаунта</button>
-        </div>
-    </div>
-
     <!-- Модальное окно Оплаты -->
     <div class="modal-overlay" id="payModal">
         <div class="modal">
@@ -568,7 +549,6 @@
                 <h2 id="payPlanName">Оплата подписки</h2>
                 <p style="color: #aaa; margin-top: 5px;">Отсканируйте QR-код в приложении банка</p>
                 
-                <!-- ИЗОБРАЖЕНИЕ QR-КОДА -->
                 <img src="qr.png" alt="QR Code" class="qr-img" id="qrCodeImg" onerror="this.src='qr.png'">
                 
                 <div class="pay-amount" id="payAmountText">150 ₽</div>
@@ -580,7 +560,6 @@
     </div>
 
     <script>
-        // Вставьте сюда ваш действующий Groq API ключ (формата gsk_...)
         const DEFAULT_GROQ_KEY = "ВСТАВЬТЕ_ВАШ_GROQ_KEY_СЮДА";
 
         let currentBillingCycle = 'month';
@@ -591,7 +570,6 @@
         let selectedJarName = "";
         let lastAiCodeSnippet = "";
 
-        // Управление Историей Чатов
         let chats = JSON.parse(localStorage.getItem('lirdi_chats')) || [];
         let currentChatId = localStorage.getItem('lirdi_active_chat_id') || null;
 
@@ -609,17 +587,13 @@
             }
         };
 
-        /* --- ИСТОРИЯ И УПРАВЛЕНИЕ ЧАТАМИ --- */
         function createNewChat() {
             const newId = 'chat_' + Date.now();
             const newChat = {
                 id: newId,
                 title: 'Новый диалог',
-                messages: [
-                    { type: 'ai', text: 'Привет! Я LirdiChat AI. Чем могу помочь с разработкой модов?' }
-                ]
+                messages: [{ type: 'ai', text: 'Привет! Я LirdiChat AI. Чем могу помочь с разработкой модов?' }]
             };
-
             chats.unshift(newChat);
             currentChatId = newId;
             saveChatsToStorage();
@@ -637,22 +611,17 @@
             messagesContainer.innerHTML = "";
 
             if (chat) {
-                chat.messages.forEach(msg => {
-                    appendMessageUI(msg.type, msg.text);
-                });
+                chat.messages.forEach(msg => appendMessageUI(msg.type, msg.text));
             }
         }
 
         function deleteChat(event, chatId) {
             event.stopPropagation();
             chats = chats.filter(c => c.id !== chatId);
-            
             if (chats.length === 0) {
                 createNewChat();
             } else {
-                if (currentChatId === chatId) {
-                    currentChatId = chats[0].id;
-                }
+                if (currentChatId === chatId) currentChatId = chats[0].id;
                 saveChatsToStorage();
                 renderHistoryList();
                 loadChat(currentChatId);
@@ -662,12 +631,10 @@
         function renderHistoryList() {
             const historyList = document.getElementById('chatHistoryList');
             historyList.innerHTML = '';
-
             chats.forEach(chat => {
                 const item = document.createElement('div');
                 item.className = `history-item ${chat.id === currentChatId ? 'active' : ''}`;
                 item.onclick = () => loadChat(chat.id);
-
                 item.innerHTML = `
                     <span class="history-title">${chat.title}</span>
                     <button class="delete-chat-btn" onclick="deleteChat(event, '${chat.id}')">✕</button>
@@ -680,7 +647,6 @@
             localStorage.setItem('lirdi_chats', JSON.stringify(chats));
         }
 
-        /* --- ЧАТ И СООБЩЕНИЯ --- */
         async function sendMessage() {
             const inputField = document.getElementById("userInput");
             const userText = inputField.value.trim();
@@ -688,15 +654,9 @@
 
             if (!userText) return;
 
-            if (!apiKey || apiKey === "ВСТАВЬТЕ_ВАШ_GROQ_KEY_СЮДА") {
-                alert("Пожалуйста, укажите валидный Groq API ключ в коде (переменная DEFAULT_GROQ_KEY)!");
-                return;
-            }
-
             let activeChat = chats.find(c => c.id === currentChatId);
             if (!activeChat) return;
 
-            // Переименовываем чат по первому запросу
             if (activeChat.messages.length <= 1) {
                 activeChat.title = userText.length > 20 ? userText.substring(0, 20) + '...' : userText;
                 renderHistoryList();
@@ -709,7 +669,6 @@
                 document.getElementById('fileBtn').innerText = "📎 .JAR";
             }
 
-            // Добавляем сообщение пользователя
             activeChat.messages.push({ type: 'user', text: userText });
             appendMessageUI("user", userText);
             inputField.value = "";
@@ -726,20 +685,13 @@
                     body: JSON.stringify({
                         model: "llama-3.3-70b-versatile",
                         messages: [
-                            {
-                                role: "system",
-                                content: "Тебя зовут LirdiChat AI. Ты отвечаешь ИСКЛЮЧИТЕЛЬНО на русском языке. Помогай с разработкой модов Minecraft."
-                            },
-                            {
-                                role: "user",
-                                content: fullPrompt
-                            }
+                            { role: "system", content: "Тебя зовут LirdiChat AI. Ты отвечаешь ИСКЛЮЧИТЕЛЬНО на русском языке." },
+                            { role: "user", content: fullPrompt }
                         ]
                     })
                 });
 
                 const data = await response.json();
-
                 if (response.ok) {
                     const aiReply = data.choices[0].message.content;
                     loadingMsgUI.innerText = aiReply;
@@ -769,17 +721,10 @@
             return msgDiv;
         }
 
-        /* --- СКАЧИВАНИЕ .JAR --- */
         async function downloadJar() {
-            if (typeof JSZip === 'undefined') {
-                alert("Ошибка загрузки JSZip библиотеки.");
-                return;
-            }
-
+            if (typeof JSZip === 'undefined') return alert("Ошибка библиотеки JSZip");
             appendMessageUI('system', '⏳ Формирование .JAR архива...');
-
             const zip = new JSZip();
-
             zip.file("META-INF/MANIFEST.MF", "Manifest-Version: 1.0\r\nCreated-By: LirdiChat AI Mod Builder\r\n");
 
             const fabricModJson = {
@@ -787,17 +732,12 @@
                 "id": "lirdichat_mod",
                 "version": "1.0.0",
                 "name": "LirdiChat Generated Mod",
-                "description": "Мод, сгенерированный в LirdiChat AI",
                 "authors": [currentUser ? currentUser.login : "LirdiUser"],
-                "license": "MIT",
-                "environment": "*",
-                "entrypoints": {
-                    "main": ["net.lirdi.mod.LirdiMod"]
-                }
+                "entrypoints": { "main": ["net.lirdi.mod.LirdiMod"] }
             };
             zip.file("fabric.mod.json", JSON.stringify(fabricModJson, null, 2));
 
-            let codeContent = lastAiCodeSnippet || "// Generated by LirdiChat AI\npackage net.lirdi.mod;\n\npublic class LirdiMod {\n    public static void init() {\n        System.out.println(\"LirdiChat Mod Loaded!\");\n    }\n}";
+            let codeContent = lastAiCodeSnippet || "package net.lirdi.mod;\n\npublic class LirdiMod {\n    public static void init() {}\n}";
             zip.file("net/lirdi/mod/LirdiMod.java", codeContent);
 
             zip.generateAsync({type: "blob"}).then(function(content) {
@@ -807,31 +747,16 @@
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                appendMessageUI('system', '✅ Файл LirdiMod.jar успешно сгенерирован и скачан!');
-            }).catch(function(err) {
-                appendMessageUI('system', '❌ Ошибка при сборке .jar: ' + err.message);
+                appendMessageUI('system', '✅ Файл LirdiMod.jar скачан!');
             });
         }
 
-        /* --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ --- */
         function setBillingCycle(cycle) {
             currentBillingCycle = cycle;
-            const btnMonth = document.getElementById('btnMonth');
-            const btnYear = document.getElementById('btnYear');
-            const plusPrice = document.getElementById('plusPrice');
-            const proPrice = document.getElementById('proPrice');
-
-            if (cycle === 'month') {
-                btnMonth.classList.add('active');
-                btnYear.classList.remove('active');
-                plusPrice.innerHTML = '150 ₽<span style="font-size: 1rem; color: #888;">/мес</span>';
-                proPrice.innerHTML = '400 ₽<span style="font-size: 1rem; color: #888;">/мес</span>';
-            } else {
-                btnYear.classList.add('active');
-                btnMonth.classList.remove('active');
-                plusPrice.innerHTML = '500 ₽<span style="font-size: 1rem; color: #888;">/год</span>';
-                proPrice.innerHTML = '750 ₽<span style="font-size: 1rem; color: #888;">/год</span>';
-            }
+            document.getElementById('btnMonth').classList.toggle('active', cycle === 'month');
+            document.getElementById('btnYear').classList.toggle('active', cycle === 'year');
+            document.getElementById('plusPrice').innerHTML = cycle === 'month' ? '150 ₽<span style="font-size: 1rem; color: #888;">/мес</span>' : '500 ₽<span style="font-size: 1rem; color: #888;">/год</span>';
+            document.getElementById('proPrice').innerHTML = cycle === 'month' ? '400 ₽<span style="font-size: 1rem; color: #888;">/мес</span>' : '750 ₽<span style="font-size: 1rem; color: #888;">/год</span>';
         }
 
         function openAuthModal(mode) {
@@ -842,22 +767,10 @@
             document.getElementById('authModal').style.display = 'none';
         }
         function switchTab(mode) {
-            const tabLogin = document.getElementById('tabLogin');
-            const tabRegister = document.getElementById('tabRegister');
-            const emailGroup = document.getElementById('emailGroup');
-            const submitBtn = document.getElementById('authSubmitBtn');
-
-            if (mode === 'login') {
-                tabLogin.classList.add('active');
-                tabRegister.classList.remove('active');
-                emailGroup.style.display = 'none';
-                submitBtn.innerText = 'Войти';
-            } else {
-                tabRegister.classList.add('active');
-                tabLogin.classList.remove('active');
-                emailGroup.style.display = 'block';
-                submitBtn.innerText = 'Зарегистрироваться';
-            }
+            document.getElementById('tabLogin').classList.toggle('active', mode === 'login');
+            document.getElementById('tabRegister').classList.toggle('active', mode === 'register');
+            document.getElementById('emailGroup').style.display = mode === 'login' ? 'none' : 'block';
+            document.getElementById('authSubmitBtn').innerText = mode === 'login' ? 'Войти' : 'Зарегистрироваться';
         }
 
         function handleAuth(event) {
@@ -868,22 +781,14 @@
             currentUser = {
                 login: login,
                 email: email || login + '@lirdi.ai',
-                plan: 'Free',
-                expiry: null
+                plan: 'Lirdi Free',
+                expiryTimestamp: null,
+                createdAt: Date.now()
             };
 
             localStorage.setItem('lirdi_user', JSON.stringify(currentUser));
             updateUserUI();
             closeAuthModal();
-            appendMessageUI('system', `Добро пожаловать, ${login}! Вы успешно вошли.`);
-        }
-
-        function logout() {
-            localStorage.removeItem('lirdi_user');
-            currentUser = null;
-            updateUserUI();
-            closeProfileModal();
-            appendMessageUI('system', 'Вы вышли из аккаунта.');
         }
 
         function updateUserUI() {
@@ -893,8 +798,9 @@
                 if (currentUser.plan === 'Lirdi Plus') colorClass = 'plus';
                 if (currentUser.plan === 'Lirdi Pro') colorClass = 'pro';
 
+                // Переход на отдельную страницу profile.html при клике
                 userSection.innerHTML = `
-                    <span class="user-nickname ${colorClass}" onclick="openProfileModal()">${currentUser.login}</span>
+                    <a href="profile.html" class="user-nickname ${colorClass}">${currentUser.login}</a>
                     <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem;" onclick="logout()">Выйти</button>
                 `;
             } else {
@@ -904,16 +810,10 @@
             }
         }
 
-        function openProfileModal() {
-            if (!currentUser) return;
-            document.getElementById('profLogin').innerText = currentUser.login;
-            document.getElementById('profEmail').innerText = currentUser.email;
-            document.getElementById('profPlan').innerText = currentUser.plan;
-            document.getElementById('profExpiry').innerText = currentUser.expiry || 'Бессрочно';
-            document.getElementById('profileModal').style.display = 'flex';
-        }
-        function closeProfileModal() {
-            document.getElementById('profileModal').style.display = 'none';
+        function logout() {
+            localStorage.removeItem('lirdi_user');
+            currentUser = null;
+            updateUserUI();
         }
 
         function openPayment(planName) {
@@ -931,7 +831,6 @@
             document.getElementById('payPlanName').innerText = 'Оплата ' + planName;
             document.getElementById('payAmountText').innerText = pendingPayAmount + ' ₽';
             document.getElementById('payPeriodText').innerText = currentBillingCycle === 'month' ? '1 Месяц' : '1 Год';
-
             document.getElementById('payModal').style.display = 'flex';
         }
 
@@ -948,14 +847,13 @@
             }
 
             currentUser.plan = pendingPayPlan;
-            currentUser.expiry = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+            currentUser.expiryTimestamp = now.getTime(); // Запоминаем точное время окончания
 
             localStorage.setItem('lirdi_user', JSON.stringify(currentUser));
             updateUserUI();
             closePayModal();
 
-            alert(`Подписка ${pendingPayPlan} успешно активирована до ${currentUser.expiry}!`);
-            appendMessageUI('system', `Подписка обновлена: ${pendingPayPlan} (до ${currentUser.expiry})`);
+            alert(`Подписка ${pendingPayPlan} успешно активирована!`);
         }
 
         function handleFileSelect(event) {
@@ -963,7 +861,6 @@
             if (!file) return;
             selectedJarName = file.name;
             document.getElementById('fileBtn').innerText = "✅ " + file.name;
-            appendMessageUI('system', `Файл ${file.name} прикреплен к следующему запросу.`);
         }
     </script>
 </body>
